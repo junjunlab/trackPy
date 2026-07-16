@@ -154,6 +154,11 @@ regions = parse_regions("genes.gtf", [("7", 10900000, 11000000, "chr7:10.9-11.0M
 plot_isoforms_regions(regions, data, ["Input","IP"], ..., "out.pdf")
 ```
 
+## Documentation
+
+- **[User Guide](USER_GUIDE.md)** — Full manual with examples, recipes, and screenshots
+- **[API Reference](API_REFERENCE.md)** — Complete parameter and function reference
+
 ## License
 
 MIT
