@@ -6,12 +6,14 @@ Usage:
     trackpy info   <file.bw>                          Show chromosome info
     trackpy plot   faceted <genes> -g <gtf> -b <bw...> [-l <labels>] Faceted plot
     trackpy plot   isoforms <genes> -g <gtf> -b <bw...> [-l <labels>] Isoform-level plot
+    trackpy plot   regions <chr:start-end ...> -g <gtf> -b <bw...> [-l <labels>] Region-based isoform plot
 
 Examples:
     trackpy info data/input.bw
     trackpy query data/input.bw chr7:10900000-10910000
     trackpy plot faceted Zscan4a Zscan4b -g genes.gtf -b a.bw b.bw c.bw d.bw -l Input1 Input2 IP1 IP2 -o out
     trackpy plot isoforms Myc Jun -g genes.gtf -b *.bw -l In1 In2 IP1 IP2 -o out
+    trackpy plot regions chr7:10900000-11000000 chr7:14200000-14300000 -g genes.gtf -b in.bw ip.bw -l Input IP -o out
 """
 
 import argparse
@@ -22,8 +24,8 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from trackpy.bigwig import BigWigReader
-from trackpy.gtf import parse_annotations, load_gene_data
-from trackpy.plot import (IGV_COLORS, plot_faceted, plot_isoforms)
+from trackpy.gtf import parse_annotations, load_gene_data, parse_regions, parse_faceted_regions
+from trackpy.plot import (IGV_COLORS, plot_faceted, plot_isoforms, plot_isoforms_regions)
 import numpy as np
 
 
@@ -59,17 +61,7 @@ def cmd_query(args):
 
 
 def cmd_plot(args):
-    """Create track plots (single, faceted, or isoforms)."""
-    # Parse annotations (GTF or GFF3, auto-detected)
-    genes = parse_annotations(args.gtf, args.genes)
-    missing = [gn for gn in args.genes if not genes[gn].get("chr")]
-    if missing:
-        print(f"Warning: genes not found in annotation, skipped: {missing}")
-        genes = {gn: gi for gn, gi in genes.items() if gi.get("chr")}
-    if not genes:
-        print("ERROR: no valid genes found in annotation")
-        sys.exit(1)
-
+    """Create track plots (faceted, isoforms, or regions)."""
     # Organize bigWig files
     bw_paths = {}
     if args.labels:
@@ -99,11 +91,6 @@ def cmd_plot(args):
         print("ERROR: No bigWig files specified. Use -b.")
         sys.exit(1)
 
-    print(f"Loading data for {len(genes)} genes x {len(track_labels)} tracks...")
-    data = load_gene_data(genes, bw_paths,
-                          flank_up=args.flank_up, flank_down=args.flank_down)
-    ymax_values = {gn: data[gn]["ymax"] for gn in genes}
-
     colors = dict(IGV_COLORS)
     colors["cds"] = args.cds_color
     colors["utr"] = args.utr_color
@@ -129,7 +116,6 @@ def cmd_plot(args):
             wspace = 0.02
         else:
             max_label_len = max((len(str(lbl)) for lbl in track_labels), default=5)
-            # Estimate: each char ~0.012 in figure fraction, plus base gap
             wspace = max(0.06, 0.02 + 0.012 * max_label_len)
 
     # Parse highlights: "chr7:start-end" or "start-end"
@@ -145,7 +131,7 @@ def cmd_plot(args):
             highlights.append((chrom, int(s.replace(",", "")), int(e.replace(",", "")), color))
 
     # Figure size
-    default_sizes = {"faceted": (14, 6.5), "isoforms": (15, 8)}
+    default_sizes = {"faceted": (14, 6.5), "isoforms": (15, 8), "regions": (15, 8)}
     dw, dh = default_sizes[args.mode]
     figsize = (args.width or dw, args.height or dh)
 
@@ -153,6 +139,44 @@ def cmd_plot(args):
     title = f"{', '.join(args.genes)} | trackPy | mm10"
 
     if args.mode == "faceted":
+        # Auto-detect: region (chr:start-end) or gene names
+        is_region_input = any(":" in g for g in args.genes)
+        if is_region_input:
+            # Parse regions and discover genes
+            parsed_regions = []
+            for region_str in args.genes:
+                chrom, _, coords = region_str.partition(":")
+                start, _, end = coords.partition("-")
+                if not chrom or not start or not end:
+                    print(f"ERROR: invalid region format '{region_str}'")
+                    sys.exit(1)
+                chrom = chrom.strip()
+                start = int(start.replace(",", ""))
+                end = int(end.replace(",", ""))
+                label = f"{chrom}:{start:,}-{end:,}"
+                parsed_regions.append((chrom, start, end, label))
+            print(f"  Searching for genes in {len(parsed_regions)} region(s)...")
+            genes = parse_faceted_regions(args.gtf, parsed_regions)
+            if not genes:
+                print("ERROR: no genes found in specified regions")
+                sys.exit(1)
+            print(f"  Found {len(genes)} region(s) with transcripts")
+        else:
+            # Parse gene annotations by name
+            genes = parse_annotations(args.gtf, args.genes)
+            missing = [gn for gn in args.genes if not genes[gn].get("chr")]
+            if missing:
+                print(f"Warning: genes not found in annotation, skipped: {missing}")
+                genes = {gn: gi for gn, gi in genes.items() if gi.get("chr")}
+            if not genes:
+                print("ERROR: no valid genes found in annotation")
+                sys.exit(1)
+
+        print(f"Loading data for {len(genes)} genes x {len(track_labels)} tracks...")
+        data = load_gene_data(genes, bw_paths,
+                              flank_up=args.flank_up, flank_down=args.flank_down)
+        ymax_values = {gn: data[gn]["ymax"] for gn in genes}
+
         out = f"{out_base}.pdf"
         plot_faceted(genes, data, track_labels, ymax_values, colors, out,
                      title=title, gene_model_bottom=not args.gene_model_top,
@@ -172,6 +196,20 @@ def cmd_plot(args):
         print(f"  Saved: {out}")
 
     elif args.mode == "isoforms":
+        genes = parse_annotations(args.gtf, args.genes)
+        missing = [gn for gn in args.genes if not genes[gn].get("chr")]
+        if missing:
+            print(f"Warning: genes not found in annotation, skipped: {missing}")
+            genes = {gn: gi for gn, gi in genes.items() if gi.get("chr")}
+        if not genes:
+            print("ERROR: no valid genes found in annotation")
+            sys.exit(1)
+
+        print(f"Loading data for {len(genes)} genes x {len(track_labels)} tracks...")
+        data = load_gene_data(genes, bw_paths,
+                              flank_up=args.flank_up, flank_down=args.flank_down)
+        ymax_values = {gn: data[gn]["ymax"] for gn in genes}
+
         out = f"{out_base}.pdf"
         plot_isoforms(genes, data, track_labels, ymax_values, colors, out,
                       title=title, iso_h=args.isoform_height,
@@ -191,6 +229,64 @@ def cmd_plot(args):
                 trap_smooth=args.trap_smooth, marker_size=args.marker_size,
                 trap_color_top=args.trap_color[0], trap_color_bot=args.trap_color[1],
                 trap_height=args.trap_height)
+        print(f"  Saved: {out}")
+
+    elif args.mode == "regions":
+        # Parse region strings: chr:start-end
+        parsed_regions = []
+        for region_str in args.genes:
+            chrom, _, coords = region_str.partition(":")
+            start, _, end = coords.partition("-")
+            if not chrom or not start or not end:
+                print(f"ERROR: invalid region format '{region_str}', expected chr:start-end")
+                sys.exit(1)
+            chrom_clean = chrom.strip()
+            start = int(start.replace(",", ""))
+            end = int(end.replace(",", ""))
+            label = f"{chrom_clean}:{start:,}-{end:,}"
+            parsed_regions.append((chrom_clean, start, end, label))
+
+        if not parsed_regions:
+            print("ERROR: no valid regions specified")
+            sys.exit(1)
+
+        print(f"  Detected GTF format: {args.gtf}")
+        print(f"  Scanning annotations for {len(parsed_regions)} regions...")
+        regions_data = parse_regions(args.gtf, parsed_regions)
+
+        for label, rd in regions_data.items():
+            n_tx = len(rd["transcripts"])
+            print(f"  {label}: {n_tx} transcript{'s' if n_tx != 1 else ''}")
+
+        total_tx = sum(len(rd["transcripts"]) for rd in regions_data.values())
+        if total_tx == 0:
+            print("ERROR: no transcripts found in specified regions")
+            sys.exit(1)
+
+        print(f"Loading data for {len(regions_data)} regions x {len(track_labels)} tracks...")
+        data = load_gene_data(regions_data, bw_paths,
+                              flank_up=args.flank_up, flank_down=args.flank_down)
+        ymax_values = {rn: data[rn]["ymax"] for rn in regions_data}
+
+        out = f"{out_base}.pdf"
+        plot_isoforms_regions(regions_data, data, track_labels, ymax_values, colors, out,
+                              title=title, iso_h=args.isoform_height,
+                              iso_label_pos=args.isoform_label_pos,
+                              iso_label_size=args.isoform_label_size,
+                              iso_align=args.isoform_align, wspace=wspace,
+                              show_isoform_label=not args.no_isoform_label,
+                              show_coords=not args.no_coords,
+                              ymax_override=args.ymax,
+                              ymax_pos=tuple(args.ymax_pos) if not args.no_range_label else None,
+                              ymax_label_size=args.ymax_label_size,
+                              show_yticks=not args.no_yticks,
+                              show_box=args.show_box,
+                              track_colors=track_colors,
+                              figsize=figsize,
+                              yscale=args.yscale, highlights=highlights, cytoband=args.cytoband, cytoband_height=args.cytoband_height,
+                              trap_smooth=args.trap_smooth, marker_size=args.marker_size,
+                              trap_color_top=args.trap_color[0], trap_color_bot=args.trap_color[1],
+                              trap_height=args.trap_height)
         print(f"  Saved: {out}")
 
 
@@ -213,8 +309,8 @@ def main():
 
     # plot
     p = sub.add_parser("plot", help="Create track plots")
-    p.add_argument("mode", choices=["faceted", "isoforms"])
-    p.add_argument("genes", nargs="+", help="Gene names")
+    p.add_argument("mode", choices=["faceted", "isoforms", "regions"])
+    p.add_argument("genes", nargs="+", help="Gene names or chr:start-end regions")
     p.add_argument("-g", "--gtf", required=True,
                    help="Annotation file (GTF or GFF3, .gz supported, auto-detected)")
     p.add_argument("-o", "--output", help="Output file base name")

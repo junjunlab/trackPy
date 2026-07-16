@@ -43,7 +43,7 @@ def _has_overlap(s, e, regions):
 
 
 def draw_gene_model(ax, gene_info, region_start, region_end, colors=None,
-                    utr_ratio=0.8):
+                    utr_ratio=0.8, gene_names=None):
     c = colors or IGV_COLORS
     exons = gene_info.get("exons", [])
     cds   = gene_info.get("CDS", [])
@@ -73,29 +73,47 @@ def draw_gene_model(ax, gene_info, region_start, region_end, colors=None,
         if not in_cds and not _has_overlap(es, ee, utr5) and not _has_overlap(es, ee, utr3):
             ax.add_patch(Rectangle((es, utr_y), ee - es, utr_h,
                          facecolor=c["utr"], edgecolor="none"))
+    if gene_names:
+        mid = (region_start + region_end) / 2
+        ax.text(mid, 0.85, gene_names, fontsize=5, color="#555555", ha="center", va="top",
+                style="italic", clip_on=True)
 
 
-def draw_strand_arrow(ax, gs, ge, strand, colors=None):
+def draw_strand_arrow(ax, gs, ge, strand, colors=None, arrow_y=2.5):
     c = colors or IGV_COLORS
     if strand == "+":
-        ax.annotate("", xy=(ge, 2.5), xytext=(gs, 2.5),
+        ax.annotate("", xy=(ge, arrow_y), xytext=(gs, arrow_y),
                     arrowprops=dict(arrowstyle="->", color=c["input_line"], lw=1.0))
     else:
-        ax.annotate("", xy=(gs, 2.5), xytext=(ge, 2.5),
+        ax.annotate("", xy=(gs, arrow_y), xytext=(ge, arrow_y),
                     arrowprops=dict(arrowstyle="->", color=c["input_line"], lw=1.0))
 
 
 def draw_isoform_row(ax, tx, rs, re, colors=None, label_pos="bottom", label_size=6,
-                     show_label=True):
+                     show_label=True, strand=None):
     c = colors or IGV_COLORS
     exons = tx.get("exons", [])
     cds   = tx.get("CDS", [])
     utr5  = tx.get("UTR_5", [])
     utr3  = tx.get("UTR_3", [])
     is_coding = tx.get("is_coding", True)
+    strand = strand or tx.get("strand")
     if exons:
-        ax.plot([min(e[0] for e in exons), max(e[1] for e in exons)],
-                [1.0, 1.0], linewidth=0.3, color=c["intron"])
+        g_left = min(e[0] for e in exons)
+        g_right = max(e[1] for e in exons)
+        ax.plot([g_left, g_right], [1.0, 1.0], linewidth=0.3, color=c["intron"])
+        # Draw strand arrows on intron line
+        if strand:
+            span = g_right - g_left if g_right > g_left else 1
+            arrow_spacing = max(span / 8, 1)
+            x = g_left + arrow_spacing * 0.5
+            direction = 1 if strand == "+" else -1
+            arrow_dx = span * 0.015 * direction
+            while x < g_right - arrow_spacing * 0.5:
+                ax.annotate("", xy=(x + arrow_dx, 1.0), xytext=(x - arrow_dx, 1.0),
+                            arrowprops=dict(arrowstyle="->", color=c["intron"],
+                            lw=0.4), clip_on=True)
+                x += arrow_spacing
     for es, ee in exons:
         if is_coding:
             for cs, ce in cds:
@@ -344,7 +362,8 @@ def plot_faceted(genes, data, track_labels, ymax_values, colors, output,
         # --- Gene model ---
         ax_g = fig.add_subplot(gs[gmr, gi_idx]); ax_g.set_xlim(rs, re); ax_g.set_ylim(0, 3); ax_g.set_facecolor("none")
         tx = gi["transcripts"][0] if gi.get("transcripts") else {}
-        draw_gene_model(ax_g, tx, rs, re, colors, utr_ratio=utr_ratio)
+        draw_gene_model(ax_g, tx, rs, re, colors, utr_ratio=utr_ratio,
+                        gene_names=tx.get("gene_names"))
         draw_strand_arrow(ax_g, gi["start"], gi["end"], gi.get("strand", "+"), colors)
         if not cytoband: ax_g.set_xlabel(f"{chrom}:{rs:,}-{re:,}", fontsize=6, color="#888888")
         ax_g.xaxis.set_ticks([])
@@ -383,8 +402,8 @@ def plot_isoforms(genes, data, track_labels, ymax_values, colors, output,
     max_iso = max(len(genes[gn]["transcripts"]) for gn in gene_names)
     head = 2 if show_coords else 0
     ideo = 1 if cytoband else 0
-    tot = n_tracks + max_iso + 1 + head + ideo
-    hr = ([0.35, 0.25] if show_coords else []) + [2.0] * n_tracks + [iso_h] * max_iso + [0.3] + ([cytoband_height] if cytoband else [])
+    tot = n_tracks + max_iso + 2 + head + ideo
+    hr = ([0.35, 0.25] if show_coords else []) + [2.0] * n_tracks + [0.15] + [iso_h] * max_iso + [0.3] + ([cytoband_height] if cytoband else [])
     s0 = head
 
     fig = plt.figure(figsize=figsize)
@@ -424,7 +443,15 @@ def plot_isoforms(genes, data, track_labels, ymax_values, colors, output,
                               ymax_pos=ymax_pos, ymax_label_size=ymax_label_size,
                               show_yticks=show_yticks, show_box=show_box)
 
-        iso_s = n_tracks + head
+        # Strand direction arrow (between signals and isoforms)
+        ax_strand = fig.add_subplot(gs[n_tracks + head, gi_idx])
+        ax_strand.set_xlim(rs, re); ax_strand.set_ylim(0, 3)
+        ax_strand.set_facecolor("none")
+        draw_strand_arrow(ax_strand, gi["start"], gi["end"], gi.get("strand", "+"), colors, arrow_y=1.5)
+        ax_strand.set_yticks([]); ax_strand.set_xticks([])
+        for sp in ax_strand.spines.values(): sp.set_visible(False)
+
+        iso_s = n_tracks + head + 1
         if iso_align == "top":
             off_top = 0
         elif iso_align == "center":
@@ -443,6 +470,150 @@ def plot_isoforms(genes, data, track_labels, ymax_values, colors, output,
 
         for er in range(max_iso - niso):
             if er < off_top or er >= off_top + niso:
+                ax = fig.add_subplot(gs[iso_s + er, gi_idx])
+                ax.set_facecolor("none"); ax.set_yticks([]); ax.set_xticks([])
+                for sp in ax.spines.values(): sp.set_visible(False)
+
+        ax_x = fig.add_subplot(gs[tot - 1 - ideo, gi_idx]); draw_xaxis(ax_x, rs, re, chrom=gi["chr"])
+        if cytoband:
+            ax_ideo = fig.add_subplot(gs[tot - 1, gi_idx])
+            draw_ideogram(ax_ideo, gi["chr"], gi["start"], gi["end"], cytoband, colors,
+                         region_start=gd["region"][0], region_end=gd["region"][1],
+                         trap_smooth=trap_smooth, marker_size=marker_size,
+                         trap_color_top=trap_color_top, trap_color_bot=trap_color_bot,
+                         trap_height=trap_height)
+        if highlights: add_highlights(track_axes + iso_axes + [ax_h, ax_i] if show_coords else track_axes + iso_axes, highlights, rs, re, chrom=gi["chr"])
+
+    if title: fig.suptitle(str(title), fontsize=10, fontweight="bold", y=0.995, color="#1A1A1A")
+    fig.text(0.06, 0.015, "CDS", fontsize=7, fontweight="bold", color=colors["cds"])
+    fig.text(0.09, 0.015, "UTR", fontsize=7, fontweight="bold", color=colors["utr"])
+    fig.text(0.13, 0.015, "Non-coding", fontsize=7, color=colors["noncoding"])
+    fig.savefig(str(output), dpi=300, facecolor="white", edgecolor="none")
+    plt.close(fig)
+
+
+def _pack_transcripts_igv(txs):
+    """Pack transcripts into rows IGV-style: non-overlapping share a row."""
+    if not txs: return []
+    sorted_txs = sorted(txs, key=lambda t: min(
+        e[0] for e in t.get("exons", [[0, 0]])))
+    rows = []
+    for tx in sorted_txs:
+        tx_exons = tx.get("exons", [])
+        if not tx_exons:
+            rows.append([tx])
+            continue
+        tx_start = min(e[0] for e in tx_exons)
+        tx_end = max(e[1] for e in tx_exons)
+        placed = False
+        for row in rows:
+            can_place = True
+            for existing in row:
+                ex = existing.get("exons", [])
+                if not ex: continue
+                ex_start = min(e[0] for e in ex)
+                ex_end = max(e[1] for e in ex)
+                if tx_start < ex_end and tx_end > ex_start:
+                    can_place = False
+                    break
+            if can_place:
+                row.append(tx)
+                placed = True
+                break
+        if not placed:
+            rows.append([tx])
+    return rows
+
+
+def plot_isoforms_regions(regions_data, data, track_labels, ymax_values, colors, output,
+                          title=None, iso_h=0.35, figsize=(15, 8),
+                          iso_label_pos="bottom", iso_label_size=3.8,
+                          iso_align="top", wspace=0.06,
+                          ymax_override=None, ymax_pos=None, ymax_label_size=8,
+                          show_yticks=True, show_box=False, track_colors=None, yscale="gene",
+                          show_isoform_label=True, show_coords=True, highlights=None,
+                          cytoband=None, cytoband_height=0.6, trap_smooth=200, marker_size=0.01,
+                          trap_color_top="#E0E0E0", trap_color_bot="#404040", trap_height=2.5):
+    """Create isoform-level track plot for specified genomic regions.
+    Each column = one region, showing all overlapping transcripts packed IGV-style."""
+    region_labels = list(regions_data.keys())
+    n_regions = len(region_labels)
+    n_tracks = len(track_labels)
+
+    # Pre-pack transcripts per region (IGV-style)
+    packed_per_region = {}
+    for rn in region_labels:
+        packed_per_region[rn] = _pack_transcripts_igv(regions_data[rn]["transcripts"])
+    max_rows = max(len(packed_per_region[rn]) for rn in region_labels)
+
+    head = 2 if show_coords else 0
+    ideo = 1 if cytoband else 0
+    tot = n_tracks + max_rows + 1 + head + ideo
+    hr = ([0.35, 0.25] if show_coords else []) + [2.0] * n_tracks + [iso_h] * max_rows + [0.3] + ([cytoband_height] if cytoband else [])
+    s0 = head
+
+    fig = plt.figure(figsize=figsize)
+    gs = fig.add_gridspec(tot, n_regions, hspace=0.03, wspace=wspace,
+                          height_ratios=hr,
+                          left=0.06, right=0.88, top=0.95, bottom=0.05)
+
+    for gi_idx, rn in enumerate(region_labels):
+        gi = regions_data[rn]; gd = data[rn]; rs, re = gd["region"]; ymax = gd["ymax"]
+        chrom = gi["chr"]
+        packed_rows = packed_per_region[rn]
+        niso = len(regions_data[rn]["transcripts"])
+        nrows = len(packed_rows)
+
+        if show_coords:
+            ax_h = fig.add_subplot(gs[0, gi_idx])
+            ax_h.set_xlim(0, 1); ax_h.set_ylim(0, 1); ax_h.set_facecolor("white")
+            ax_h.text(0.5, 0.7, f"{chrom}:{rs:,}-{re:,}", transform=ax_h.transAxes,
+                      fontsize=8, fontweight="bold", color=colors["highlight"],
+                      ha="center", va="center")
+            ax_h.set_yticks([]); ax_h.set_xticks([])
+            for sp in ax_h.spines.values(): sp.set_visible(False)
+            ax_i = fig.add_subplot(gs[1, gi_idx])
+            ax_i.set_xlim(0, 1); ax_i.set_ylim(0, 1); ax_i.set_facecolor("white")
+            ax_i.text(0.5, 0.5, f"Region {gi_idx+1} | {chrom} | {niso} tx in {nrows} row{'s' if nrows>1 else ''}",
+                      transform=ax_i.transAxes, fontsize=8, fontweight="bold",
+                      fontstyle="italic", color=colors["highlight"],
+                      ha="center", va="center")
+            ax_i.set_yticks([]); ax_i.set_xticks([])
+            for sp in ax_i.spines.values(): sp.set_visible(False)
+
+        track_axes = []
+        for ti, lbl in enumerate(track_labels):
+            ax = fig.add_subplot(gs[s0 + ti, gi_idx]); track_axes.append(ax)
+            ym = ymax_override if ymax_override is not None else (gd.get("track_ymax",{}).get(lbl,ymax) if yscale=="track" else ymax)
+            cl, cf = _resolve_track_color(str(lbl), track_colors, colors)
+            draw_signal_track(ax, gd["tracks"].get(lbl, []), rs, re, ym, cl, cf,
+                              str(lbl) if gi_idx == 0 else None,
+                              ymax_pos=ymax_pos, ymax_label_size=ymax_label_size,
+                              show_yticks=show_yticks, show_box=show_box)
+
+        iso_s = n_tracks + head
+        if iso_align == "top":
+            off_top = 0
+        elif iso_align == "center":
+            off_top = (max_rows - nrows) // 2
+        else:
+            off_top = max_rows - nrows
+        iso_axes = []
+        for ri, row_txs in enumerate(packed_rows):
+            ax = fig.add_subplot(gs[iso_s + off_top + ri, gi_idx])
+            iso_axes.append(ax)
+            ax.set_xlim(rs, re); ax.set_ylim(0, 2); ax.set_facecolor("none")
+            for tx in row_txs:
+                tx_display = dict(tx)
+                if tx.get("gene_name"):
+                    tx_display["id"] = tx["gene_name"]
+                draw_isoform_row(ax, tx_display, rs, re, colors, iso_label_pos, iso_label_size,
+                                 show_label=show_isoform_label, strand=tx.get("strand"))
+            ax.set_yticks([]); ax.set_xticks([])
+            for sp in ax.spines.values(): sp.set_visible(False)
+
+        for er in range(max_rows - nrows):
+            if er < off_top or er >= off_top + nrows:
                 ax = fig.add_subplot(gs[iso_s + er, gi_idx])
                 ax.set_facecolor("none"); ax.set_yticks([]); ax.set_xticks([])
                 for sp in ax.spines.values(): sp.set_visible(False)

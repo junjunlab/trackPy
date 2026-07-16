@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "trackpy"
-version = "0.1.4"
+version = "0.1.5"
 description = "Publication-quality genomic track plots via CLI"
 authors = [{name = "trackPy"}]
 license = {text = "MIT"}

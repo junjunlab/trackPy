@@ -45,6 +45,14 @@ trackpy plot faceted Zscan4b Zscan4c Zscan4d Zscan4e Zscan4f \
 trackpy plot faceted Actb Myc -g genes.gff3.gz \
   -b wt.bedgraph.gz ko.bedgraph.gz -l WT KO \
   --track-colors "#3498DB" "#E74C3C" -o out
+
+# Region-based faceted (auto-detects genes in intervals)
+trackpy plot faceted chr14:54835580-55001465 chr7:73025897-76116527 \
+  -g genes.gtf -b in.bw ip.bw -l Input IP -o out
+
+# Region-based IGV-style isoform view
+trackpy plot regions chr14:54835580-55001465 chr7:73025897-76116527 \
+  -g genes.gtf -b in.bw ip.bw -l Input IP -o out --show-box
 ```
 
 ## Commands
@@ -53,8 +61,9 @@ trackpy plot faceted Actb Myc -g genes.gff3.gz \
 |---------|-------------|
 | `trackpy info <file.bw>` | Chromosome names and sizes |
 | `trackpy query <file.bw> <region>` | Dump signal (region: `chr:start-end`) |
-| `trackpy plot faceted <genes...> [opts]` | Multi-gene side-by-side |
+| `trackpy plot faceted <genes\|regions...> [opts]` | Multi-gene/region side-by-side |
 | `trackpy plot isoforms <genes...> [opts]` | All transcripts with IDs |
+| `trackpy plot regions <chr:start-end ...> [opts]` | Region-based IGV-style isoform view |
 
 ## Parameters
 
@@ -131,13 +140,18 @@ trackpy plot faceted Actb Myc -g genes.gff3.gz \
 ```python
 from trackpy import (
     BigWigReader, BedGraphReader, parse_annotations, load_gene_data,
-    plot_faceted, plot_isoforms, IGV_COLORS
+    parse_regions, parse_faceted_regions,
+    plot_faceted, plot_isoforms, plot_isoforms_regions, IGV_COLORS
 )
+# Gene-name based
 genes = parse_annotations("genes.gff3.gz", ["Zscan4b", "Myc"])
 data = load_gene_data(genes, {"Input":"in.bw","IP":"ip.bw"})
-
 plot_faceted(genes, data, ["Input","IP"], data, IGV_COLORS, "out.pdf",
              cytoband="mm10_cytoBandIdeo.txt.gz")
+
+# Region-based
+regions = parse_regions("genes.gtf", [("7", 10900000, 11000000, "chr7:10.9-11.0Mb")])
+plot_isoforms_regions(regions, data, ["Input","IP"], ..., "out.pdf")
 ```
 
 ## License

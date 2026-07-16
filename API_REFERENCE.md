@@ -1,4 +1,4 @@
-# trackPy API Reference (v0.1.4)
+# trackPy API Reference (v0.1.5)
 
 ## CLI Commands
 
@@ -9,7 +9,10 @@ Print chromosome names and sizes.
 Query values. Region: `chr:start-end`. Outputs tab-separated.
 
 ### `trackpy plot <mode> <genes...> [options]`
-Two modes: `faceted`, `isoforms`.
+Three modes: `faceted`, `isoforms`, `regions`.
+- `faceted`: gene names or `chr:start-end` regions (auto-detected). Regions collapse all genes per interval.
+- `isoforms`: gene names only. Shows all transcripts per gene with strand arrows.
+- `regions`: `chr:start-end` only. IGV-style packed transcript rows with intron strand arrows.
 
 ---
 
@@ -113,8 +116,17 @@ Parse GTF or GFF3 (auto-detected). Returns gene structures dict.
 ### `trackpy.load_gene_data(genes, bw_paths, flank_up=3000, flank_down=3000)`
 Load bigWig/bedGraph data. Auto-syncs chr prefix. Returns `{gene: {region, chrom, tracks, ymax, track_ymax}}`.
 
+### `trackpy.parse_regions(filepath, regions)`
+Parse transcripts overlapping genomic intervals. `regions`: list of `(chrom, start, end, label)`.
+
+### `trackpy.parse_faceted_regions(filepath, regions)`
+Find all genes in regions, collapse transcripts per region.
+
 ### `trackpy.plot_faceted(..., cytoband=None)`
 ### `trackpy.plot_isoforms(...)`
+### `trackpy.plot_isoforms_regions(..., cytoband=None)`
+IGV-style packed transcript rows for genomic regions. Non-overlapping transcripts share a row.
+
 ### `trackpy.IGV_COLORS`
 
 Default color dict. cytoband files provided in `demo/cytoband/` for mm10, mm39, hg19, hg38.
