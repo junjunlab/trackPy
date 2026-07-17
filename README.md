@@ -1,6 +1,6 @@
 # trackPy
 
-<img src="demo/output/trackPy_logo.png" width="120" alt="trackPy logo" align="right">
+<img src="demo/output/trackPy_logo.png" width="160" alt="trackPy logo" align="right">
 
 **Publication-quality genomic track plots from the command line.**
 
