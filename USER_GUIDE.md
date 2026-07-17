@@ -11,9 +11,10 @@
 3. [Core Concepts](#3-core-concepts)
 4. [Commands Reference](#4-commands-reference)
 5. [Plot Modes](#5-plot-modes)
-6. [Parameters Reference](#6-parameters-reference)
-7. [Recipes](#7-recipes)
-8. [Python API](#8-python-api)
+6. [Parameters in Detail](#6-parameters-in-detail)
+7. [Parameters Quick Reference](#7-parameters-quick-reference)
+8. [Recipes](#8-recipes)
+9. [Python API](#9-python-api)
 
 ---
 
@@ -253,7 +254,9 @@ Before (72 transcripts):    After IGV packing (12 rows):
 
 ---
 
-## 6. Parameters Reference
+## 7. Parameters Quick Reference
+
+> See [Section 6](#6-parameters-in-detail) for visual examples and detailed explanations of key parameters.
 
 ### Input / Output
 | Flag | Default | Description |
@@ -326,69 +329,216 @@ Before (72 transcripts):    After IGV packing (12 rows):
 
 ---
 
-## 7. Recipes
+## 6. Parameters in Detail
 
-### 7.1 Basic gene panel with ideogram
+### 6.1 Chromosome Ideogram (`--cytoband`)
+
+Adding `--cytoband` enables a full chromosome ideogram below each gene column with IGV-standard Giemsa staining, a red gene position marker with triangle indicator, and a gray gradient trapezoid showing the zoom relationship.
+
+```bash
+trackpy plot faceted Zscan4c Zscan4d Zscan4e Zscan4f \
+  -g genes.gtf -b in1.bw in2.bw ip1.bw ip2.bw -l In1 In2 IP1 IP2 \
+  --cytoband mm10_cytoBandIdeo.txt.gz --show-box -o out
+```
+
+![Faceted with cytoband](demo/output/guide_faceted_genes.png)
+
+**Related parameters:**
+
+| Flag | Default | Effect |
+|------|---------|--------|
+| `--cytoband-height` | `0.6` | Height of the chromosome panel. Larger = taller ideogram |
+| `--trap-height` | `2.5` | Trapezoid height. Larger = taller zoom indicator |
+| `--trap-color` | `#E0E0E0 #404040` | Trapezoid gradient: TOP_COLOR BOTTOM_COLOR |
+| `--trap-smooth` | `200` | Number of gradient slices. Higher = smoother gradient |
+| `--marker-size` | `0.01` | Red triangle marker size (figure fraction). Larger = bigger triangle |
+
+**Custom trapezoid example:**
+```bash
+trackpy plot faceted Zscan4b Zscan4c -g genes.gtf -b in1.bw in2.bw \
+  -l In1 In2 --cytoband mm10_cytoBandIdeo.txt.gz --show-box \
+  --trap-color "#3498DB" "#2980B9" --trap-height 3.5 --marker-size 0.02 -o out
+```
+
+![Custom trapezoid](demo/output/param_trapezoid.png)
+
+### 6.2 Highlights (`--highlight`)
+
+Add semi-transparent vertical highlight spans to mark regions of interest. Repeatable for multiple highlights.
+
+```bash
+trackpy plot faceted Zscan4b Zscan4c -g genes.gtf \
+  -b in1.bw in2.bw ip1.bw ip2.bw -l In1 In2 IP1 IP2 \
+  --cytoband mm10_cytoBandIdeo.txt.gz --show-box \
+  --highlight 10904000-10905000 "#FF000020" \
+  --highlight 11008000-11010000 "#0000FF20" -o out
+```
+
+![Highlights](demo/output/param_highlights.png)
+
+> Format: `REGION COLOR`. Region can be `start-end` (genome-wide) or `chr:start-end` (chromosome-specific). Color should include alpha (e.g., `#FF000020`).
+
+### 6.3 Track Colors (`--track-colors`)
+
+Override the default IGV-style Input/IP color scheme with custom colors.
+
+```bash
+trackpy plot faceted Zscan4b Zscan4c -g genes.gtf \
+  -b in1.bw in2.bw ip1.bw ip2.bw -l In1 In2 IP1 IP2 \
+  --cytoband mm10_cytoBandIdeo.txt.gz --show-box \
+  --track-colors "#3498DB" "#2980B9" "#E74C3C" "#C0392B" -o out
+```
+
+![Custom track colors](demo/output/param_track_colors.png)
+
+> One HEX color per `-b` file, in the same order. If not specified, IP tracks (containing "IP" or "m6A" in the label) get dark fill, Input tracks get light gray fill.
+
+### 6.4 Y-Axis Control (`--yscale`, `--ymax`, `--no-yticks`)
+
+**`--yscale`** controls whether all tracks per gene share the same y-axis (`gene`, default) or each track has an independent scale (`track`):
+
+```bash
+# Independent y-axis per track
+trackpy plot faceted Zscan4b Zscan4c -g genes.gtf \
+  -b in1.bw in2.bw ip1.bw ip2.bw -l In1 In2 IP1 IP2 \
+  --yscale track --show-box -o out
+```
+
+![Y-scale track](demo/output/param_yscale_track.png)
+
+**`--ymax`** sets a fixed y-axis ceiling for all tracks (instead of auto-computed 99th percentile).
+
+**Compact mode** (`--no-yticks` + `--no-range-label`):
+```bash
+trackpy plot faceted Zscan4b Zscan4c Zscan4d -g genes.gtf \
+  -b in1.bw in2.bw ip1.bw ip2.bw -l In1 In2 IP1 IP2 \
+  --no-yticks --no-range-label --cytoband mm10_cytoBandIdeo.txt.gz \
+  --show-box -o out
+```
+
+![Compact](demo/output/param_compact.png)
+
+### 6.5 Flanking Region (`--flank-up`, `--flank-down`)
+
+Control the padding around genes. Default is 3000 bp on each side.
+
+```bash
+# 10 kb flanking for wider genomic context
+trackpy plot faceted Zscan4b -g genes.gtf -b in1.bw in2.bw ip1.bw ip2.bw \
+  -l In1 In2 IP1 IP2 --flank-up 10000 --flank-down 10000 \
+  --cytoband mm10_cytoBandIdeo.txt.gz --show-box -o out
+```
+
+![Wide flank](demo/output/param_flank.png)
+
+### 6.6 Gene Model Appearance
+
+**`--gene-ratio`** controls the gene model panel height relative to signal tracks:
+
+```bash
+# Taller gene model (1.5x vs default 0.8x)
+trackpy plot faceted Zscan4b Zscan4c -g genes.gtf \
+  -b in1.bw in2.bw ip1.bw ip2.bw -l In1 In2 IP1 IP2 \
+  --gene-ratio 1.5 --cytoband mm10_cytoBandIdeo.txt.gz --show-box -o out
+```
+
+![Gene ratio](demo/output/param_gene_ratio.png)
+
+**`--utr-ratio`** controls UTR height relative to CDS (0.5 = UTR half the height of CDS).
+
+**`--cds-color` / `--utr-color` / `--intron-color`** customize gene structure colors.
+
+**`--gene-model-top`** places the gene model above signal tracks instead of below:
+
+![Gene model top](demo/output/guide_gene_model_top.png)
+
+### 6.7 Isoform Display
+
+**Label position** (`--isoform-label-pos`): control where transcript IDs appear.
+
+| `left` | `right` |
+|--------|---------|
+| ![Left](demo/output/param_label_left.png) | ![Right](demo/output/param_label_right.png) |
+
+**`--isoform-height`**: controls row height (default `0.35`). Smaller = more compact.
+
+**`--isoform-align`**: alignment of isoform rows within each column when genes have different transcript counts:
+- `top` (default): rows start from the top
+- `center`: rows centered vertically
+- `bottom`: rows aligned to the bottom
+
+**`--isoform-label-size`**: font size for transcript ID labels (default `6`).
+
+**`--no-isoform-label`**: hide all transcript labels.
+
+### 6.8 Layout Controls
+
+| Flag | Effect |
+|------|--------|
+| `--width` / `--height` | Figure dimensions in inches |
+| `--wspace` | Horizontal gap between columns (auto by default) |
+| `--no-coords` | Hide the coordinate header row |
+| `--show-box` | Draw border on all 4 sides of each track panel |
+
+---
+
+## 8. Recipes
+
+### 8.1 Basic gene panel with ideogram
 ```bash
 trackpy plot faceted Myc Jun Actb \
   -g genes.gtf -b input.bw ip.bw -l Input IP \
   --cytoband mm10_cytoBandIdeo.txt.gz --show-box -o panel
 ```
 
-### 7.2 lncRNA isoform browser
+### 8.2 lncRNA isoform browser
 ```bash
 trackpy plot isoforms Malat1 Xist H19 Airn Hotair \
   -g genes.gtf -b input.bw ip.bw -l Input IP \
   --show-box --isoform-label-pos left -o lncRNA
 ```
 
-### 7.3 Explore a genomic interval (all transcripts)
+### 8.3 Explore a genomic interval (all transcripts)
 ```bash
 trackpy plot regions chr14:54835580-55001465 \
   -g genes.gtf -b input.bw ip.bw -l Input IP \
   --show-box --cytoband mm10_cytoBandIdeo.txt.gz -o my_region
 ```
 
-### 7.4 Faceted region comparison
+### 8.4 Faceted region comparison
 ```bash
 trackpy plot faceted chr14:54835580-55001465 chr7:73025897-76116527 \
   -g genes.gtf -b input.bw ip.bw -l Input IP \
   --show-box --width 10 -o compare_regions
 ```
 
-### 7.5 Custom track colors
+### 8.5 Custom track colors
 ```bash
 trackpy plot faceted Myc Jun -g genes.gtf -b wt.bw ko.bw -l WT KO \
   --track-colors "#3498DB" "#E74C3C" -o custom_colors
 ```
 
-### 7.6 Highlight specific regions
+### 8.6 Highlight specific regions
 ```bash
 trackpy plot faceted Myc -g genes.gtf -b input.bw ip.bw -l Input IP \
   --highlight chr15:61900000-61901000 "#FF000020" \
   --highlight chr15:61902000-61903000 "#0000FF20" -o highlights
 ```
 
-### 7.7 BedGraph (ATAC-seq) input
+### 8.7 BedGraph (ATAC-seq) input
 ```bash
 trackpy plot faceted Actb Myc -g genes.gff3.gz \
   -b wt.bedgraph.gz ko.bedgraph.gz -l WT KO \
   --track-colors "#3498DB" "#E74C3C" -o atac
 ```
 
-### 7.8 Compact layout (no y-ticks, no range labels)
+### 8.8 Compact layout (no y-ticks, no range labels)
 ```bash
 trackpy plot faceted Myc Jun Actb -g genes.gtf -b a.bw b.bw -l A B \
   --no-yticks --no-range-label --cytoband mm10_cytoBandIdeo.txt.gz -o compact
 ```
 
-### 7.9 Gene model on top
-```bash
-trackpy plot faceted Myc Jun -g genes.gtf -b a.bw b.bw -l A B \
-  --gene-model-top --cytoband mm10_cytoBandIdeo.txt.gz --show-box -o top
-```
-
-### 7.9 Gene model on top
+### 8.9 Gene model on top
 
 ```bash
 trackpy plot faceted Zscan4b Zscan4c Zscan4d -g genes.gtf \
@@ -398,7 +548,7 @@ trackpy plot faceted Zscan4b Zscan4c Zscan4d -g genes.gtf \
 
 ![Gene model on top](demo/output/guide_gene_model_top.png)
 
-### 7.10 lncRNA panel
+### 8.10 lncRNA panel
 
 ```bash
 trackpy plot faceted Malat1 Xist H19 Airn Hotair \
@@ -410,7 +560,7 @@ trackpy plot faceted Malat1 Xist H19 Airn Hotair \
 
 ---
 
-## 8. Python API
+## 9. Python API
 
 ```python
 from trackpy import (
