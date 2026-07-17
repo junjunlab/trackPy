@@ -180,7 +180,7 @@ def cmd_plot(args):
                               flank_up=args.flank_up, flank_down=args.flank_down)
         ymax_values = {gn: data[gn]["ymax"] for gn in genes}
 
-        out = f"{out_base}.pdf"
+        out = out_base if "." in os.path.basename(out_base) else f"{out_base}.pdf"
         if args.zoom_region and not is_region_input:
             # Parse zoom regions: comma-separated start-end pairs
             zoom_regions = []
@@ -245,7 +245,7 @@ def cmd_plot(args):
                               flank_up=args.flank_up, flank_down=args.flank_down)
         ymax_values = {gn: data[gn]["ymax"] for gn in genes}
 
-        out = f"{out_base}.pdf"
+        out = out_base if "." in os.path.basename(out_base) else f"{out_base}.pdf"
         if args.zoom_region:
             zoom_regions = []
             for part in args.zoom_region.split(","):
@@ -331,7 +331,7 @@ def cmd_plot(args):
                               flank_up=args.flank_up, flank_down=args.flank_down)
         ymax_values = {rn: data[rn]["ymax"] for rn in regions_data}
 
-        out = f"{out_base}.pdf"
+        out = out_base if "." in os.path.basename(out_base) else f"{out_base}.pdf"
         plot_isoforms_regions(regions_data, data, track_labels, ymax_values, colors, out,
                               title=title, iso_h=args.isoform_height,
                               iso_label_pos=args.isoform_label_pos,

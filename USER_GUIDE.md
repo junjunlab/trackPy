@@ -103,7 +103,8 @@ trackpy plot faceted Zscan4b Zscan4c \
 trackpy plot isoforms Myh6 Myh7 Bcl2l2 \
   -g demo/testdata/Mus_musculus.GRCm38.102.gtf.gz \
   -b ... -l "Input rep1" "Input rep2" "IP rep1" "IP rep2" \
-  --zoom-region "54945000-54960000,54975000-54990000,54885000-54888000" --show-box -o out
+  --zoom-region "54945000-54960000,54975000-54990000,54885000-54888000" \
+  --trap-color "#3498DB" "#2980B9" --show-box -o out
 ```
 
 | `--zoom-position bottom` | `--zoom-position top` |

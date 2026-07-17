@@ -77,6 +77,8 @@ def draw_gene_model(ax, gene_info, region_start, region_end, colors=None,
         mid = (region_start + region_end) / 2
         ax.text(mid, 0.85, gene_names, fontsize=5, color="#555555", ha="center", va="top",
                 style="italic", clip_on=True)
+    # Bottom boundary line
+    ax.axhline(y=0.02, color="#CCCCCC", linewidth=0.4)
 
 
 def draw_strand_arrow(ax, gs, ge, strand, colors=None, arrow_y=2.5):
@@ -131,8 +133,8 @@ def draw_isoform_row(ax, tx, rs, re, colors=None, label_pos="bottom", label_size
     if tx.get("id") and show_label:
         ex_starts = [e[0] for e in exons] if exons else [rs]
         ex_ends   = [e[1] for e in exons] if exons else [re]
-        g_left  = min(ex_starts)
-        g_right = max(ex_ends)
+        g_left  = max(min(ex_starts), rs)
+        g_right = min(max(ex_ends), re)
         span = g_right - g_left if g_right > g_left else 1
 
         if label_pos == "left":
@@ -459,9 +461,11 @@ def plot_isoforms(genes, data, track_labels, ymax_values, colors, output,
         else:  # bottom
             off_top = max_iso - niso
         iso_axes = []
+        last_iso_ax = None
         for ti, tx in enumerate(txs):
             ax = fig.add_subplot(gs[iso_s + off_top + ti, gi_idx])
             iso_axes.append(ax)
+            last_iso_ax = ax
             ax.set_xlim(rs, re); ax.set_ylim(0, 2); ax.set_facecolor("none")
             draw_isoform_row(ax, tx, rs, re, colors, iso_label_pos, iso_label_size,
                              show_label=show_isoform_label)
@@ -471,8 +475,12 @@ def plot_isoforms(genes, data, track_labels, ymax_values, colors, output,
         for er in range(max_iso - niso):
             if er < off_top or er >= off_top + niso:
                 ax = fig.add_subplot(gs[iso_s + er, gi_idx])
+                last_iso_ax = ax
                 ax.set_facecolor("none"); ax.set_yticks([]); ax.set_xticks([])
                 for sp in ax.spines.values(): sp.set_visible(False)
+        # Bottom boundary line
+        if last_iso_ax is not None:
+            last_iso_ax.axhline(y=0.02, color="#CCCCCC", linewidth=0.4)
 
         ax_x = fig.add_subplot(gs[tot - 1 - ideo, gi_idx]); draw_xaxis(ax_x, rs, re, chrom=gi["chr"])
         if cytoband:

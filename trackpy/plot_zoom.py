@@ -386,7 +386,7 @@ def plot_isoforms_zoom(genes, data, zoom_region, track_labels, ymax_values, colo
                          trap_color_top=trap_color_top, trap_color_bot=trap_color_bot,
                          trap_height=trap_height)
 
-        # Trapezoid: from last top isoform row to first bottom signal row
+        # Trapezoid: from bottom of top isoform block to top of bottom signal block
         if top_last_iso_ax and bot_first_sig_ax:
             _draw_zoom_trapezoid_vertical(top_last_iso_ax, bot_first_sig_ax,
                                           zoom_start, zoom_end, rs_full, re_full,
@@ -434,6 +434,19 @@ def _draw_isoform_block(gs, iso_s, col, txs, max_iso, rs, re, colors,
     for er in range(max_iso - niso):
         if er < off_top or er >= off_top + niso:
             ax = plt.gcf().add_subplot(gs[iso_s + er, col])
+            if first_ax is None: first_ax = ax
+            last_ax = ax
             ax.set_facecolor("none"); ax.set_yticks([]); ax.set_xticks([])
             for sp in ax.spines.values(): sp.set_visible(False)
+    # Ensure we have the bottom row axis for trapezoid reference
+    bottom_row = iso_s + max_iso - 1
+    if last_ax is None or niso < max_iso:
+        ax_bot = plt.gcf().add_subplot(gs[bottom_row, col])
+        if first_ax is None: first_ax = ax_bot
+        last_ax = ax_bot
+        ax_bot.set_facecolor("none"); ax_bot.set_yticks([]); ax_bot.set_xticks([])
+        for sp in ax_bot.spines.values(): sp.set_visible(False)
+    # Bottom boundary line on the last row
+    if last_ax is not None:
+        last_ax.axhline(y=0.02, color="#CCCCCC", linewidth=0.4)
     return first_ax, last_ax
