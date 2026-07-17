@@ -1,5 +1,7 @@
 # trackPy
 
+<p align="center"><img src="demo/output/trackPy_logo.png" width="200" alt="trackPy logo"></p>
+
 **Publication-quality genomic track plots from the command line.**
 
 Pure Python bigWig & bedGraph reader + matplotlib. IGV-style color scheme.
