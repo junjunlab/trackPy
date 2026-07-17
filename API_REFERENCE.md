@@ -1,4 +1,4 @@
-# trackPy API Reference (v0.1.5)
+# trackPy API Reference (v0.1.5.1)
 
 ## CLI Commands
 
@@ -99,6 +99,19 @@ When `--cytoband` is set:
 - Red marker on the chromosome indicates the gene position
 - Gray gradient trapezoid above the chromosome shows the zoom relationship (top=panel width, bottom=gene position)
 - Gene model x-axis coordinate labels are hidden (redundant with ideogram)
+
+### Zoom (faceted & isoforms, gene-name mode only)
+
+| Param | Default | Description |
+|-------|---------|-------------|
+| `--zoom-region` | — | Sub-region(s) to magnify. `START-END` pairs, comma-separated. One per gene; single value applies to all genes. E.g. `--zoom-region 10904000-10905000,11006000-11009000` |
+| `--zoom-position` | `bottom` | `bottom`: full gene on top, zoom below with trapezoid connecting narrow(zoom region)→wide(full zoom panel). `top`: reversed. |
+
+When `--zoom-region` is set:
+- Each gene column splits into full + zoom panels stacked vertically
+- A gradient trapezoid connects the panels: top edge at zoom region position (narrow), bottom edge spanning full zoom panel width (wide)
+- For `--zoom-position top`, the trapezoid is inverted (top=wide, bottom=narrow)
+- Shared trapezoid colors via `--trap-color TOP BOTTOM`
 
 ---
 

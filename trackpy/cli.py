@@ -26,6 +26,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from trackpy.bigwig import BigWigReader
 from trackpy.gtf import parse_annotations, load_gene_data, parse_regions, parse_faceted_regions
 from trackpy.plot import (IGV_COLORS, plot_faceted, plot_isoforms, plot_isoforms_regions)
+from trackpy.plot_zoom import plot_faceted_zoom, plot_isoforms_zoom
 import numpy as np
 
 
@@ -168,6 +169,8 @@ def cmd_plot(args):
             if missing:
                 print(f"Warning: genes not found in annotation, skipped: {missing}")
                 genes = {gn: gi for gn, gi in genes.items() if gi.get("chr")}
+            # Preserve user-specified gene order
+            genes = {gn: genes[gn] for gn in args.genes if gn in genes}
             if not genes:
                 print("ERROR: no valid genes found in annotation")
                 sys.exit(1)
@@ -178,21 +181,52 @@ def cmd_plot(args):
         ymax_values = {gn: data[gn]["ymax"] for gn in genes}
 
         out = f"{out_base}.pdf"
-        plot_faceted(genes, data, track_labels, ymax_values, colors, out,
-                     title=title, gene_model_bottom=not args.gene_model_top,
-                     show_coords=not args.no_coords, wspace=wspace,
-                     utr_ratio=args.utr_ratio,
-                     ymax_override=args.ymax,
-                     ymax_pos=tuple(args.ymax_pos) if not args.no_range_label else None,
-                     ymax_label_size=args.ymax_label_size,
-                     show_yticks=not args.no_yticks,
-                show_box=args.show_box,
-                track_colors=track_colors,
-                figsize=figsize,
-                yscale=args.yscale, gene_ratio=args.gene_ratio, highlights=highlights, cytoband=args.cytoband, cytoband_height=args.cytoband_height,
-                trap_smooth=args.trap_smooth, marker_size=args.marker_size,
-                trap_color_top=args.trap_color[0], trap_color_bot=args.trap_color[1],
-                trap_height=args.trap_height)
+        if args.zoom_region and not is_region_input:
+            # Parse zoom regions: comma-separated start-end pairs
+            zoom_regions = []
+            for part in args.zoom_region.split(","):
+                part = part.strip()
+                zs, _, ze = part.partition("-")
+                zoom_regions.append((int(zs.replace(",", "")), int(ze.replace(",", ""))))
+            if len(zoom_regions) == 1:
+                zoom_regions = zoom_regions * len(genes)
+            elif len(zoom_regions) != len(genes):
+                print(f"ERROR: --zoom-region count ({len(zoom_regions)}) must be 1 or match gene count ({len(genes)})")
+                sys.exit(1)
+            for i, zr in enumerate(zoom_regions):
+                print(f"  Zoom region [{list(genes.keys())[i]}]: {zr[0]:,}-{zr[1]:,}")
+            plot_faceted_zoom(genes, data, zoom_regions, track_labels, ymax_values, colors, out,
+                         title=title, gene_model_bottom=not args.gene_model_top,
+                         show_coords=not args.no_coords,
+                         utr_ratio=args.utr_ratio,
+                         ymax_override=args.ymax,
+                         ymax_pos=tuple(args.ymax_pos) if not args.no_range_label else None,
+                         ymax_label_size=args.ymax_label_size,
+                         show_yticks=not args.no_yticks,
+                         show_box=args.show_box,
+                         track_colors=track_colors,
+                         figsize=figsize,
+                         yscale=args.yscale, gene_ratio=args.gene_ratio, highlights=highlights, cytoband=args.cytoband, cytoband_height=args.cytoband_height,
+                         trap_smooth=args.trap_smooth, marker_size=args.marker_size,
+                         trap_color_top=args.trap_color[0], trap_color_bot=args.trap_color[1],
+                         trap_height=args.trap_height,
+                         zoom_position=args.zoom_position)
+        else:
+            plot_faceted(genes, data, track_labels, ymax_values, colors, out,
+                         title=title, gene_model_bottom=not args.gene_model_top,
+                         show_coords=not args.no_coords, wspace=wspace,
+                         utr_ratio=args.utr_ratio,
+                         ymax_override=args.ymax,
+                         ymax_pos=tuple(args.ymax_pos) if not args.no_range_label else None,
+                         ymax_label_size=args.ymax_label_size,
+                         show_yticks=not args.no_yticks,
+                    show_box=args.show_box,
+                    track_colors=track_colors,
+                    figsize=figsize,
+                    yscale=args.yscale, gene_ratio=args.gene_ratio, highlights=highlights, cytoband=args.cytoband, cytoband_height=args.cytoband_height,
+                    trap_smooth=args.trap_smooth, marker_size=args.marker_size,
+                    trap_color_top=args.trap_color[0], trap_color_bot=args.trap_color[1],
+                    trap_height=args.trap_height)
         print(f"  Saved: {out}")
 
     elif args.mode == "isoforms":
@@ -201,6 +235,7 @@ def cmd_plot(args):
         if missing:
             print(f"Warning: genes not found in annotation, skipped: {missing}")
             genes = {gn: gi for gn, gi in genes.items() if gi.get("chr")}
+        genes = {gn: genes[gn] for gn in args.genes if gn in genes}
         if not genes:
             print("ERROR: no valid genes found in annotation")
             sys.exit(1)
@@ -211,24 +246,52 @@ def cmd_plot(args):
         ymax_values = {gn: data[gn]["ymax"] for gn in genes}
 
         out = f"{out_base}.pdf"
-        plot_isoforms(genes, data, track_labels, ymax_values, colors, out,
-                      title=title, iso_h=args.isoform_height,
-                      iso_label_pos=args.isoform_label_pos,
-                      iso_label_size=args.isoform_label_size,
-                      iso_align=args.isoform_align, wspace=wspace,
-                      show_isoform_label=not args.no_isoform_label,
-                      show_coords=not args.no_coords,
-                      ymax_override=args.ymax,
-                      ymax_pos=tuple(args.ymax_pos) if not args.no_range_label else None,
-                      ymax_label_size=args.ymax_label_size,
-                      show_yticks=not args.no_yticks,
-                show_box=args.show_box,
-                track_colors=track_colors,
-                figsize=figsize,
-                yscale=args.yscale, gene_ratio=args.gene_ratio, highlights=highlights, cytoband=args.cytoband, cytoband_height=args.cytoband_height,
-                trap_smooth=args.trap_smooth, marker_size=args.marker_size,
-                trap_color_top=args.trap_color[0], trap_color_bot=args.trap_color[1],
-                trap_height=args.trap_height)
+        if args.zoom_region:
+            zoom_regions = []
+            for part in args.zoom_region.split(","):
+                part = part.strip()
+                zs, _, ze = part.partition("-")
+                zoom_regions.append((int(zs.replace(",", "")), int(ze.replace(",", ""))))
+            if len(zoom_regions) == 1:
+                zoom_regions = zoom_regions * len(genes)
+            plot_isoforms_zoom(genes, data, zoom_regions, track_labels, ymax_values, colors, out,
+                          title=title, iso_h=args.isoform_height,
+                          iso_label_pos=args.isoform_label_pos,
+                          iso_label_size=args.isoform_label_size,
+                          iso_align=args.isoform_align, wspace=wspace,
+                          show_isoform_label=not args.no_isoform_label,
+                          show_coords=not args.no_coords,
+                          ymax_override=args.ymax,
+                          ymax_pos=tuple(args.ymax_pos) if not args.no_range_label else None,
+                          ymax_label_size=args.ymax_label_size,
+                          show_yticks=not args.no_yticks,
+                          show_box=args.show_box,
+                          track_colors=track_colors,
+                          figsize=figsize,
+                          yscale=args.yscale, highlights=highlights, cytoband=args.cytoband, cytoband_height=args.cytoband_height,
+                          trap_smooth=args.trap_smooth, marker_size=args.marker_size,
+                          trap_color_top=args.trap_color[0], trap_color_bot=args.trap_color[1],
+                          trap_height=args.trap_height,
+                          zoom_position=args.zoom_position)
+        else:
+            plot_isoforms(genes, data, track_labels, ymax_values, colors, out,
+                          title=title, iso_h=args.isoform_height,
+                          iso_label_pos=args.isoform_label_pos,
+                          iso_label_size=args.isoform_label_size,
+                          iso_align=args.isoform_align, wspace=wspace,
+                          show_isoform_label=not args.no_isoform_label,
+                          show_coords=not args.no_coords,
+                          ymax_override=args.ymax,
+                          ymax_pos=tuple(args.ymax_pos) if not args.no_range_label else None,
+                          ymax_label_size=args.ymax_label_size,
+                          show_yticks=not args.no_yticks,
+                    show_box=args.show_box,
+                    track_colors=track_colors,
+                    figsize=figsize,
+                    yscale=args.yscale, gene_ratio=args.gene_ratio, highlights=highlights, cytoband=args.cytoband, cytoband_height=args.cytoband_height,
+                    trap_smooth=args.trap_smooth, marker_size=args.marker_size,
+                    trap_color_top=args.trap_color[0], trap_color_bot=args.trap_color[1],
+                    trap_height=args.trap_height)
         print(f"  Saved: {out}")
 
     elif args.mode == "regions":
@@ -384,6 +447,11 @@ def main():
                    help="Height of the trapezoid zoom indicator (default: 2.5)")
     p.add_argument("--trap-smooth", type=int, default=200,
                    help="Number of gradient slices for trapezoid, higher = smoother (default: 200)")
+    p.add_argument("--zoom-region", type=str, default=None,
+                   metavar="START-END[,START-END...]",
+                   help="Zoom sub-regions. One per gene, comma-separated. Single value applies to all. E.g. --zoom-region 10904000-10905000,11006000-11009000")
+    p.add_argument("--zoom-position", choices=["bottom", "top"], default="bottom",
+                   help="Position of zoom panel: bottom (default) or top")
     p.add_argument("--marker-size", type=float, default=0.01,
                    help="Size of the red triangle marker below gene on cytoband (default: 0.01)")
     p.add_argument("--cytoband-height", type=float, default=0.6,

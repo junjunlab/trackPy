@@ -135,6 +135,12 @@ trackpy plot regions chr14:54835580-55001465 chr7:73025897-76116527 \
 | `--marker-size` | 0.01 | Red triangle marker size on cytoband |
 | `--cytoband-height` | 0.6 | Chromosome panel height |
 
+### Zoom (faceted & isoforms, gene-name mode)
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--zoom-region` | — | Sub-region(s) to magnify. One per gene, comma-separated. Single value applies to all. E.g. `--zoom-region 10904000-10905000,11006000-11009000` |
+| `--zoom-position` | `bottom` | Zoom panel position: `bottom` (full above, zoom below) or `top` (zoom above, full below) |
+
 ## Python API
 
 ```python

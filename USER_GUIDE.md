@@ -526,6 +526,53 @@ trackpy plot faceted Zscan4b Zscan4c \
 | `--no-coords` | Hide the coordinate header row |
 | `--show-box` | Draw border on all 4 sides of each track panel |
 
+### 6.9 Zoom (`--zoom-region`, `--zoom-position`)
+
+Magnify a sub-region within each gene. Works in `faceted` and `isoforms` modes (gene-name input only). Each gene column splits into full view + zoomed view, connected by a gradient trapezoid.
+
+```bash
+# Single zoom region (applies to all genes)
+trackpy plot faceted Zscan4b -g genes.gtf -b in1.bw in2.bw ip1.bw ip2.bw \
+  -l "Input rep1" "Input rep2" "IP rep1" "IP rep2" \
+  --zoom-region 10903000-10905000 --show-box -o out
+```
+
+![Zoom faceted](demo/output/guide_zoom_faceted.png)
+
+```bash
+# Per-gene zoom regions (comma-separated)
+trackpy plot isoforms Myh6 Myh7 -g genes.gtf -b in1.bw in2.bw ip1.bw ip2.bw \
+  -l "Input rep1" "Input rep2" "IP rep1" "IP rep2" \
+  --zoom-region "54940000-54960000,54970000-54990000" --show-box -o out
+```
+
+![Zoom isoforms](demo/output/guide_zoom_isoforms.png)
+
+**Layout (--zoom-position bottom, default):**
+```
+┌──────────────────┐
+│  Header          │
+├──────────────────┤
+│  Signal (full)   │  ← full gene view
+├──────────────────┤
+│  Gene model      │
+│     ╲╱╲╱╲╱      │  ← trapezoid: narrow top (zoom region)
+│    ╱╲╱╲╱╲╱     │               wide bottom (full panel)
+├──────────────────┤
+│  Signal (zoom)   │  ← zoomed region
+├──────────────────┤
+│  Gene model      │
+└──────────────────┘
+```
+
+**Parameters:**
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--zoom-region` | — | `START-END` pairs, comma-separated. One per gene; single value = all genes. |
+| `--zoom-position` | `bottom` | `bottom` = full above, zoom below. `top` = zoom above, full below. |
+| `--trap-color` | `#E0E0E0 #404040` | Shared trapezoid gradient colors (also controls cytoband trapezoid) |
+
 ---
 
 ## 8. Recipes
