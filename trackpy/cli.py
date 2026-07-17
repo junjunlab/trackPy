@@ -26,7 +26,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from trackpy.bigwig import BigWigReader
 from trackpy.gtf import parse_annotations, load_gene_data, parse_regions, parse_faceted_regions
 from trackpy.plot import (IGV_COLORS, plot_faceted, plot_isoforms, plot_isoforms_regions)
-from trackpy.plot_zoom import plot_faceted_zoom, plot_isoforms_zoom
+from trackpy.plot_zoom import plot_faceted_zoom, plot_isoforms_zoom, plot_regions_zoom
 import numpy as np
 
 
@@ -332,7 +332,37 @@ def cmd_plot(args):
         ymax_values = {rn: data[rn]["ymax"] for rn in regions_data}
 
         out = out_base if "." in os.path.basename(out_base) else f"{out_base}.pdf"
-        plot_isoforms_regions(regions_data, data, track_labels, ymax_values, colors, out,
+        if args.zoom_region:
+            zoom_regions = []
+            zoom_chroms = []
+            for part in args.zoom_region.split(","):
+                part = part.strip()
+                if ":" in part:
+                    zc, _, zcoords = part.partition(":")
+                    zs, _, ze = zcoords.partition("-")
+                    zoom_chroms.append(zc.strip())
+                else:
+                    zs, _, ze = part.partition("-")
+                    zoom_chroms.append(None)
+                zoom_regions.append((int(zs.replace(",", "")), int(ze.replace(",", ""))))
+            # Map zoom regions to region order by chromosome
+            if len(zoom_regions) == 1 and zoom_chroms[0] is None:
+                zoom_regions = zoom_regions * len(regions_data)
+            elif any(c is not None for c in zoom_chroms):
+                mapped = []
+                region_labels = list(regions_data.keys())
+                for i, rn in enumerate(region_labels):
+                    rd_chrom = regions_data[rn]["chr"]
+                    found = False
+                    for j, zc in enumerate(zoom_chroms):
+                        if zc is None or zc == rd_chrom or zc == f"chr{rd_chrom}" or f"chr{zc}" == rd_chrom:
+                            mapped.append(zoom_regions[j])
+                            found = True
+                            break
+                    if not found:
+                        mapped.append(zoom_regions[0] if zoom_regions else (0, 1))
+                zoom_regions = mapped
+            plot_regions_zoom(regions_data, data, zoom_regions, track_labels, ymax_values, colors, out,
                               title=title, iso_h=args.isoform_height,
                               iso_label_pos=args.isoform_label_pos,
                               iso_label_size=args.isoform_label_size,
@@ -349,7 +379,27 @@ def cmd_plot(args):
                               yscale=args.yscale, highlights=highlights, cytoband=args.cytoband, cytoband_height=args.cytoband_height,
                               trap_smooth=args.trap_smooth, marker_size=args.marker_size,
                               trap_color_top=args.trap_color[0], trap_color_bot=args.trap_color[1],
-                              trap_height=args.trap_height)
+                              trap_height=args.trap_height,
+                              zoom_position=args.zoom_position)
+        else:
+            plot_isoforms_regions(regions_data, data, track_labels, ymax_values, colors, out,
+                                  title=title, iso_h=args.isoform_height,
+                                  iso_label_pos=args.isoform_label_pos,
+                                  iso_label_size=args.isoform_label_size,
+                                  iso_align=args.isoform_align, wspace=wspace,
+                                  show_isoform_label=not args.no_isoform_label,
+                                  show_coords=not args.no_coords,
+                                  ymax_override=args.ymax,
+                                  ymax_pos=tuple(args.ymax_pos) if not args.no_range_label else None,
+                                  ymax_label_size=args.ymax_label_size,
+                                  show_yticks=not args.no_yticks,
+                                  show_box=args.show_box,
+                                  track_colors=track_colors,
+                                  figsize=figsize,
+                                  yscale=args.yscale, highlights=highlights, cytoband=args.cytoband, cytoband_height=args.cytoband_height,
+                                  trap_smooth=args.trap_smooth, marker_size=args.marker_size,
+                                  trap_color_top=args.trap_color[0], trap_color_bot=args.trap_color[1],
+                                  trap_height=args.trap_height)
         print(f"  Saved: {out}")
 
 

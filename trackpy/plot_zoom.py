@@ -450,3 +450,205 @@ def _draw_isoform_block(gs, iso_s, col, txs, max_iso, rs, re, colors,
     if last_ax is not None:
         last_ax.axhline(y=0.02, color="#CCCCCC", linewidth=0.4)
     return first_ax, last_ax
+
+
+def plot_regions_zoom(regions_data, data, zoom_region, track_labels, ymax_values, colors, output,
+                      title=None, iso_h=0.35, figsize=(15, 12),
+                      iso_label_pos="bottom", iso_label_size=3.8,
+                      iso_align="top", wspace=0.06,
+                      show_coords=True, show_isoform_label=True,
+                      ymax_override=None, ymax_pos=None, ymax_label_size=8,
+                      show_yticks=True, show_box=False, track_colors=None, yscale="gene",
+                      highlights=None, cytoband=None, cytoband_height=0.6,
+                      trap_smooth=200, marker_size=0.01,
+                      trap_color_top="#E0E0E0", trap_color_bot="#404040", trap_height=2.5,
+                      zoom_position="bottom"):
+    """Regions plot with zoom-in panels stacked vertically.
+    zoom_region: list of (start, end) tuples, one per region."""
+    from trackpy.plot import _pack_transcripts_igv
+    region_labels = list(regions_data.keys())
+    n_regions = len(region_labels)
+    n_tracks = len(track_labels)
+
+    # Pre-pack transcripts per region
+    packed_per_region = {}
+    for rn in region_labels:
+        packed_per_region[rn] = _pack_transcripts_igv(regions_data[rn]["transcripts"])
+    max_rows = max(len(packed_per_region[rn]) for rn in region_labels)
+
+    head = 1 if show_coords else 0
+    ideo = 1 if cytoband else 0
+    hr = ([0.8] if show_coords else []) \
+         + [2.0] * n_tracks + [iso_h] * max_rows \
+         + [0.8] \
+         + [2.0] * n_tracks + [iso_h] * max_rows \
+         + [0.3] + ([cytoband_height] if cytoband else [])
+
+    top_s0 = head
+    top_iso_s = top_s0 + n_tracks
+    trap_row = top_iso_s + max_rows
+    bot_s0 = trap_row + 1
+    bot_iso_s = bot_s0 + n_tracks
+    xaxis_row = bot_iso_s + max_rows
+
+    has_full_on_top = (zoom_position == "bottom")
+    fig = plt.figure(figsize=figsize)
+    tot = len(hr)
+    gs = fig.add_gridspec(tot, n_regions, hspace=0.03, wspace=wspace,
+                          height_ratios=hr,
+                          left=0.06, right=0.88, top=0.95, bottom=0.05)
+
+    for gi_idx, rn in enumerate(region_labels):
+        gi = regions_data[rn]; gd = data[rn]
+        chrom = gi["chr"]
+        zoom_start, zoom_end = zoom_region[gi_idx]
+        rs_full, re_full = gd["region"]
+        ymax_full = ymax_override if ymax_override is not None else gd["ymax"]
+        packed_rows = packed_per_region[rn]
+        nrows = len(packed_rows)
+        top_last_iso_ax = None
+        bot_first_sig_ax = None
+
+        zoom_tracks = {}
+        for lbl in track_labels:
+            vals = gd["tracks"].get(lbl, [])
+            zoom_tracks[lbl] = [(s, e, v) for s, e, v in vals if e > zoom_start and s < zoom_end]
+        all_zv = [v for lbl in track_labels for _, _, v in zoom_tracks[lbl]]
+        zoom_ymax = float(np.percentile(all_zv, 99)) if all_zv else 1.0
+        zoom_ymax = ymax_override if ymax_override is not None else zoom_ymax
+
+        if show_coords:
+            ax_h = fig.add_subplot(gs[0, gi_idx])
+            ax_h.set_xlim(0, 1); ax_h.set_ylim(0, 1); ax_h.set_facecolor("white")
+            ax_h.text(0.5, 0.6, f"{chrom}:{rs_full:,}-{re_full:,}",
+                      transform=ax_h.transAxes, fontsize=7, fontweight="bold",
+                      color=colors["highlight"], ha="center", va="center")
+            zlabel = f"zoom: {zoom_start:,}-{zoom_end:,}"
+            ax_h.text(0.5, 0.2, zlabel, transform=ax_h.transAxes, fontsize=6,
+                      color="#888888", ha="center", va="center")
+            ax_h.set_yticks([]); ax_h.set_xticks([])
+            for sp in ax_h.spines.values(): sp.set_visible(False)
+
+        # --- Top block ---
+        if has_full_on_top:
+            _draw_signal_block(gs, top_s0, gi_idx, track_labels, gd["tracks"],
+                               rs_full, re_full, ymax_full, ymax_override, yscale,
+                               gd.get("track_ymax", {}), track_colors, colors,
+                               ymax_pos, ymax_label_size, show_yticks, show_box,
+                               show_labels=(gi_idx == 0))
+            _, top_last_iso_ax = _draw_packed_block(gs, top_iso_s, gi_idx, packed_rows, max_rows,
+                               rs_full, re_full, colors, iso_label_pos, iso_label_size,
+                               show_isoform_label, iso_align)
+        else:
+            _draw_signal_block(gs, top_s0, gi_idx, track_labels, zoom_tracks,
+                               zoom_start, zoom_end, zoom_ymax, ymax_override, yscale,
+                               gd.get("track_ymax", {}), track_colors, colors,
+                               ymax_pos, ymax_label_size, show_yticks, show_box,
+                               show_labels=(gi_idx == 0))
+            _, top_last_iso_ax = _draw_packed_block(gs, top_iso_s, gi_idx, packed_rows, max_rows,
+                               zoom_start, zoom_end, colors, iso_label_pos, iso_label_size,
+                               show_isoform_label, iso_align,
+                               label_filter_region=(zoom_start, zoom_end))
+
+        # --- Bottom block ---
+        if has_full_on_top:
+            bot_axes = _draw_signal_block(gs, bot_s0, gi_idx, track_labels, zoom_tracks,
+                               zoom_start, zoom_end, zoom_ymax, ymax_override, yscale,
+                               gd.get("track_ymax", {}), track_colors, colors,
+                               ymax_pos, ymax_label_size, show_yticks, show_box,
+                               show_labels=(gi_idx == 0))
+            bot_first_sig_ax = bot_axes[0] if bot_axes else None
+            _draw_packed_block(gs, bot_iso_s, gi_idx, packed_rows, max_rows,
+                               zoom_start, zoom_end, colors, iso_label_pos, iso_label_size,
+                               show_isoform_label, iso_align,
+                               label_filter_region=(zoom_start, zoom_end))
+        else:
+            bot_axes = _draw_signal_block(gs, bot_s0, gi_idx, track_labels, gd["tracks"],
+                               rs_full, re_full, ymax_full, ymax_override, yscale,
+                               gd.get("track_ymax", {}), track_colors, colors,
+                               ymax_pos, ymax_label_size, show_yticks, show_box,
+                               show_labels=(gi_idx == 0))
+            bot_first_sig_ax = bot_axes[0] if bot_axes else None
+            _draw_packed_block(gs, bot_iso_s, gi_idx, packed_rows, max_rows,
+                               rs_full, re_full, colors, iso_label_pos, iso_label_size,
+                               show_isoform_label, iso_align)
+
+        ax_x = fig.add_subplot(gs[xaxis_row, gi_idx])
+        ax_x.set_xlim(0, 1); ax_x.set_ylim(0, 1); ax_x.set_facecolor("none")
+        ax_x.text(0.5, 0.5, f"{chrom}:{rs_full:,}-{re_full:,}",
+                  transform=ax_x.transAxes, fontsize=6, color="#555555", ha="center", va="center")
+        ax_x.set_yticks([]); ax_x.set_xticks([])
+        for sp in ax_x.spines.values(): sp.set_visible(False)
+
+        if cytoband:
+            ax_cyto = fig.add_subplot(gs[xaxis_row + 1, gi_idx])
+            draw_ideogram(ax_cyto, chrom, gi["start"], gi["end"], cytoband, colors,
+                         region_start=rs_full, region_end=re_full,
+                         trap_smooth=trap_smooth, marker_size=marker_size,
+                         trap_color_top=trap_color_top, trap_color_bot=trap_color_bot,
+                         trap_height=trap_height)
+
+        if top_last_iso_ax and bot_first_sig_ax:
+            _draw_zoom_trapezoid_vertical(top_last_iso_ax, bot_first_sig_ax,
+                                          zoom_start, zoom_end, rs_full, re_full,
+                                          trap_color_top, trap_color_bot, trap_smooth,
+                                          flip=not has_full_on_top)
+
+    if title: fig.suptitle(str(title), fontsize=10, fontweight="bold", y=0.995, color="#1A1A1A")
+    fig.text(0.06, 0.015, "CDS", fontsize=7, fontweight="bold", color=colors["cds"])
+    fig.text(0.09, 0.015, "UTR", fontsize=7, fontweight="bold", color=colors["utr"])
+    fig.savefig(str(output), dpi=300, facecolor="white", edgecolor="none")
+    plt.close(fig)
+
+
+def _draw_packed_block(gs, iso_s, col, packed_rows, max_rows, rs, re, colors,
+                        iso_label_pos, iso_label_size, show_label, iso_align,
+                        label_filter_region=None):
+    """Draw packed isoform rows. Returns (first_ax, last_ax)."""
+    nrows = len(packed_rows)
+    if iso_align == "top":
+        off_top = 0
+    elif iso_align == "center":
+        off_top = (max_rows - nrows) // 2
+    else:
+        off_top = max_rows - nrows
+    first_ax = None; last_ax = None
+    for ri, row_txs in enumerate(packed_rows):
+        ax = plt.gcf().add_subplot(gs[iso_s + off_top + ri, col])
+        if first_ax is None: first_ax = ax
+        last_ax = ax
+        ax.set_xlim(rs, re); ax.set_ylim(0, 2); ax.set_facecolor("none")
+        for tx in row_txs:
+            sl = show_label
+            if label_filter_region and sl:
+                zs, ze = label_filter_region
+                exons = tx.get("exons", [])
+                if exons:
+                    tx_start = min(e[0] for e in exons)
+                    tx_end = max(e[1] for e in exons)
+                    if tx_end <= zs or tx_start >= ze:
+                        sl = False
+            tx_display = dict(tx)
+            if tx.get("gene_name"):
+                tx_display["id"] = tx["gene_name"]
+            draw_isoform_row(ax, tx_display, rs, re, colors, iso_label_pos, iso_label_size,
+                             show_label=sl)
+        ax.set_yticks([]); ax.set_xticks([])
+        for sp in ax.spines.values(): sp.set_visible(False)
+    for er in range(max_rows - nrows):
+        if er < off_top or er >= off_top + nrows:
+            ax = plt.gcf().add_subplot(gs[iso_s + er, col])
+            if first_ax is None: first_ax = ax
+            last_ax = ax
+            ax.set_facecolor("none"); ax.set_yticks([]); ax.set_xticks([])
+            for sp in ax.spines.values(): sp.set_visible(False)
+    bottom_row = iso_s + max_rows - 1
+    if last_ax is None or nrows < max_rows:
+        ax_bot = plt.gcf().add_subplot(gs[bottom_row, col])
+        if first_ax is None: first_ax = ax_bot
+        last_ax = ax_bot
+        ax_bot.set_facecolor("none"); ax_bot.set_yticks([]); ax_bot.set_xticks([])
+        for sp in ax_bot.spines.values(): sp.set_visible(False)
+    if last_ax is not None:
+        last_ax.axhline(y=0.02, color="#CCCCCC", linewidth=0.4)
+    return first_ax, last_ax

@@ -1,6 +1,6 @@
 # trackPy User Guide
 
-> **v0.1.5.1** — Publication-quality genomic track plots from the command line.
+> **v0.1.5.2** — Publication-quality genomic track plots from the command line.
 
 [GitHub](https://github.com/junjunlab/trackPy) | [API Reference](API_REFERENCE.md)
 
@@ -110,6 +110,26 @@ trackpy plot isoforms Myh6 Myh7 Bcl2l2 \
 | `--zoom-position bottom` | `--zoom-position top` |
 |---|---|
 | ![](demo/output/p27_zoom_i_bot.png) | ![](demo/output/p28_zoom_i_top.png) |
+
+### 3.3 Regions Zoom
+
+Works in `regions` mode. Specify zoom regions with chromosome prefix (`chr:start-end`) so each region gets the correct sub-interval.
+
+```bash
+trackpy plot regions chr14:54835580-55001465 chr19:5790000-5810000 \
+  -g demo/testdata/Mus_musculus.GRCm38.102.gtf.gz \
+  -b demo/testdata/GSM5746910_MS_2cell_Input_rep1.bigWig \
+     demo/testdata/GSM5746912_MS_2cell_IP_rep1.bigWig \
+  -l "Input" "IP" \
+  --zoom-region "chr14:54940000-54960000,chr19:5795000-5797000" \
+  --show-box -o out
+```
+
+| `--zoom-position bottom` (default) | `--zoom-position top` |
+|---|---|
+| ![](demo/output/p29_regions_zoom_bot.png) | ![](demo/output/p30_regions_zoom_top.png) |
+
+> Regions zoom uses `chr:start-end` format to match zoom intervals to the correct chromosome. IGV-packed transcript rows are preserved in both full and zoom panels.
 
 ---
 
@@ -351,7 +371,7 @@ trackpy plot faceted Zscan4b Zscan4c -g genes.gtf \
 ### Zoom
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--zoom-region` | — | `START-END` pairs, comma-separated, one per gene |
+| `--zoom-region` | — | `START-END` pairs, comma-separated. Regions mode: `chr:start-end` format |
 | `--zoom-position` | `bottom` | `bottom` or `top` |
 
 ### Other

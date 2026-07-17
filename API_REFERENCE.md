@@ -1,4 +1,4 @@
-# trackPy API Reference (v0.1.5.1)
+# trackPy API Reference (v0.1.5.2)
 
 ## CLI Commands
 
@@ -108,10 +108,11 @@ When `--cytoband` is set:
 | `--zoom-position` | `bottom` | `bottom`: full gene on top, zoom below with trapezoid connecting narrow(zoom region)→wide(full zoom panel). `top`: reversed. |
 
 When `--zoom-region` is set:
-- Each gene column splits into full + zoom panels stacked vertically
+- Each gene/region column splits into full + zoom panels stacked vertically
 - A gradient trapezoid connects the panels: top edge at zoom region position (narrow), bottom edge spanning full zoom panel width (wide)
 - For `--zoom-position top`, the trapezoid is inverted (top=wide, bottom=narrow)
 - Shared trapezoid colors via `--trap-color TOP BOTTOM`
+- Regions mode: use `chr:start-end` format to match zoom intervals to correct chromosomes
 
 ---
 
