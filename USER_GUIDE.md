@@ -183,13 +183,21 @@ Each column = one gene or one genomic region. Gene models shown as single collap
 **Gene-name mode:**
 ```bash
 trackpy plot faceted Myc Jun Actb \
-  -g genes.gtf -b input.bw ip.bw -l Input IP -o out
+  -g demo/testdata/Mus_musculus.GRCm38.102.gtf.gz -b demo/testdata/GSM5746910_MS_2cell_Input_rep1.bigWig \
+     demo/testdata/GSM5746911_MS_2cell_Input_rep2.bigWig \
+     demo/testdata/GSM5746912_MS_2cell_IP_rep1.bigWig \
+     demo/testdata/GSM5746913_MS_2cell_IP_rep2.bigWig \
+  -l "Input rep1" "Input rep2" "IP rep1" "IP rep2" -o out
 ```
 
 **Region mode** (auto-detected when input contains `:`):
 ```bash
 trackpy plot faceted chr14:54835580-55001465 chr7:73025897-76116527 \
-  -g genes.gtf -b input.bw ip.bw -l Input IP -o out
+  -g demo/testdata/Mus_musculus.GRCm38.102.gtf.gz -b demo/testdata/GSM5746910_MS_2cell_Input_rep1.bigWig \
+     demo/testdata/GSM5746911_MS_2cell_Input_rep2.bigWig \
+     demo/testdata/GSM5746912_MS_2cell_IP_rep1.bigWig \
+     demo/testdata/GSM5746913_MS_2cell_IP_rep2.bigWig \
+  -l "Input rep1" "Input rep2" "IP rep1" "IP rep2" -o out
 ```
 > In region mode, all genes within each interval are collapsed into one gene model row. Gene names are displayed below the structure.
 
@@ -222,7 +230,11 @@ Each column = one gene. All transcripts shown as individual rows with IDs.
 
 ```bash
 trackpy plot isoforms Myh6 Myh7 Bcl2l2 Pabpn1 \
-  -g genes.gtf -b input.bw ip.bw -l Input IP -o out --show-box
+  -g demo/testdata/Mus_musculus.GRCm38.102.gtf.gz -b demo/testdata/GSM5746910_MS_2cell_Input_rep1.bigWig \
+     demo/testdata/GSM5746911_MS_2cell_Input_rep2.bigWig \
+     demo/testdata/GSM5746912_MS_2cell_IP_rep1.bigWig \
+     demo/testdata/GSM5746913_MS_2cell_IP_rep2.bigWig \
+  -l "Input rep1" "Input rep2" "IP rep1" "IP rep2" -o out --show-box
 ```
 
 ![Isoforms gene plot](demo/output/guide_isoforms_genes.png)
@@ -233,7 +245,11 @@ Each column = one genomic region. Transcripts are **packed IGV-style**: non-over
 
 ```bash
 trackpy plot regions chr14:54835580-55001465 chr19:5790000-5810000 \
-  -g genes.gtf -b input.bw ip.bw -l Input IP -o out --show-box
+  -g demo/testdata/Mus_musculus.GRCm38.102.gtf.gz -b demo/testdata/GSM5746910_MS_2cell_Input_rep1.bigWig \
+     demo/testdata/GSM5746911_MS_2cell_Input_rep2.bigWig \
+     demo/testdata/GSM5746912_MS_2cell_IP_rep1.bigWig \
+     demo/testdata/GSM5746913_MS_2cell_IP_rep2.bigWig \
+  -l "Input rep1" "Input rep2" "IP rep1" "IP rep2" -o out --show-box
 ```
 
 **Packing example:**
@@ -337,8 +353,12 @@ Adding `--cytoband` enables a full chromosome ideogram below each gene column wi
 
 ```bash
 trackpy plot faceted Zscan4c Zscan4d Zscan4e Zscan4f \
-  -g genes.gtf -b in1.bw in2.bw ip1.bw ip2.bw -l In1 In2 IP1 IP2 \
-  --cytoband mm10_cytoBandIdeo.txt.gz --show-box -o out
+  -g demo/testdata/Mus_musculus.GRCm38.102.gtf.gz -b demo/testdata/GSM5746910_MS_2cell_Input_rep1.bigWig \
+     demo/testdata/GSM5746911_MS_2cell_Input_rep2.bigWig \
+     demo/testdata/GSM5746912_MS_2cell_IP_rep1.bigWig \
+     demo/testdata/GSM5746913_MS_2cell_IP_rep2.bigWig \
+  -l "Input rep1" "Input rep2" "IP rep1" "IP rep2" \
+  --cytoband demo/cytoband/mm10_cytoBandIdeo.txt.gz --show-box -o out
 ```
 
 ![Faceted with cytoband](demo/output/guide_faceted_genes.png)
@@ -355,8 +375,9 @@ trackpy plot faceted Zscan4c Zscan4d Zscan4e Zscan4f \
 
 **Custom trapezoid example:**
 ```bash
-trackpy plot faceted Zscan4b Zscan4c -g genes.gtf -b in1.bw in2.bw \
-  -l In1 In2 --cytoband mm10_cytoBandIdeo.txt.gz --show-box \
+trackpy plot faceted Zscan4b Zscan4c -g demo/testdata/Mus_musculus.GRCm38.102.gtf.gz -b demo/testdata/GSM5746910_MS_2cell_Input_rep1.bigWig \
+     demo/testdata/GSM5746911_MS_2cell_Input_rep2.bigWig \
+  -l "Input rep1" "Input rep2" --cytoband demo/cytoband/mm10_cytoBandIdeo.txt.gz --show-box \
   --trap-color "#3498DB" "#2980B9" --trap-height 3.5 --marker-size 0.02 -o out
 ```
 
@@ -367,9 +388,13 @@ trackpy plot faceted Zscan4b Zscan4c -g genes.gtf -b in1.bw in2.bw \
 Add semi-transparent vertical highlight spans to mark regions of interest. Repeatable for multiple highlights.
 
 ```bash
-trackpy plot faceted Zscan4b Zscan4c -g genes.gtf \
-  -b in1.bw in2.bw ip1.bw ip2.bw -l In1 In2 IP1 IP2 \
-  --cytoband mm10_cytoBandIdeo.txt.gz --show-box \
+trackpy plot faceted Zscan4b Zscan4c -g demo/testdata/Mus_musculus.GRCm38.102.gtf.gz \
+  -b demo/testdata/GSM5746910_MS_2cell_Input_rep1.bigWig \
+     demo/testdata/GSM5746911_MS_2cell_Input_rep2.bigWig \
+     demo/testdata/GSM5746912_MS_2cell_IP_rep1.bigWig \
+     demo/testdata/GSM5746913_MS_2cell_IP_rep2.bigWig \
+  -l "Input rep1" "Input rep2" "IP rep1" "IP rep2" \
+  --cytoband demo/cytoband/mm10_cytoBandIdeo.txt.gz --show-box \
   --highlight 10904000-10905000 "#FF000020" \
   --highlight 11008000-11010000 "#0000FF20" -o out
 ```
@@ -383,9 +408,13 @@ trackpy plot faceted Zscan4b Zscan4c -g genes.gtf \
 Override the default IGV-style Input/IP color scheme with custom colors.
 
 ```bash
-trackpy plot faceted Zscan4b Zscan4c -g genes.gtf \
-  -b in1.bw in2.bw ip1.bw ip2.bw -l In1 In2 IP1 IP2 \
-  --cytoband mm10_cytoBandIdeo.txt.gz --show-box \
+trackpy plot faceted Zscan4b Zscan4c -g demo/testdata/Mus_musculus.GRCm38.102.gtf.gz \
+  -b demo/testdata/GSM5746910_MS_2cell_Input_rep1.bigWig \
+     demo/testdata/GSM5746911_MS_2cell_Input_rep2.bigWig \
+     demo/testdata/GSM5746912_MS_2cell_IP_rep1.bigWig \
+     demo/testdata/GSM5746913_MS_2cell_IP_rep2.bigWig \
+  -l "Input rep1" "Input rep2" "IP rep1" "IP rep2" \
+  --cytoband demo/cytoband/mm10_cytoBandIdeo.txt.gz --show-box \
   --track-colors "#3498DB" "#2980B9" "#E74C3C" "#C0392B" -o out
 ```
 
@@ -399,8 +428,12 @@ trackpy plot faceted Zscan4b Zscan4c -g genes.gtf \
 
 ```bash
 # Independent y-axis per track
-trackpy plot faceted Zscan4b Zscan4c -g genes.gtf \
-  -b in1.bw in2.bw ip1.bw ip2.bw -l In1 In2 IP1 IP2 \
+trackpy plot faceted Zscan4b Zscan4c -g demo/testdata/Mus_musculus.GRCm38.102.gtf.gz \
+  -b demo/testdata/GSM5746910_MS_2cell_Input_rep1.bigWig \
+     demo/testdata/GSM5746911_MS_2cell_Input_rep2.bigWig \
+     demo/testdata/GSM5746912_MS_2cell_IP_rep1.bigWig \
+     demo/testdata/GSM5746913_MS_2cell_IP_rep2.bigWig \
+  -l "Input rep1" "Input rep2" "IP rep1" "IP rep2" \
   --yscale track --show-box -o out
 ```
 
@@ -410,9 +443,13 @@ trackpy plot faceted Zscan4b Zscan4c -g genes.gtf \
 
 **Compact mode** (`--no-yticks` + `--no-range-label`):
 ```bash
-trackpy plot faceted Zscan4b Zscan4c Zscan4d -g genes.gtf \
-  -b in1.bw in2.bw ip1.bw ip2.bw -l In1 In2 IP1 IP2 \
-  --no-yticks --no-range-label --cytoband mm10_cytoBandIdeo.txt.gz \
+trackpy plot faceted Zscan4b Zscan4c Zscan4d -g demo/testdata/Mus_musculus.GRCm38.102.gtf.gz \
+  -b demo/testdata/GSM5746910_MS_2cell_Input_rep1.bigWig \
+     demo/testdata/GSM5746911_MS_2cell_Input_rep2.bigWig \
+     demo/testdata/GSM5746912_MS_2cell_IP_rep1.bigWig \
+     demo/testdata/GSM5746913_MS_2cell_IP_rep2.bigWig \
+  -l "Input rep1" "Input rep2" "IP rep1" "IP rep2" \
+  --no-yticks --no-range-label --cytoband demo/cytoband/mm10_cytoBandIdeo.txt.gz \
   --show-box -o out
 ```
 
@@ -424,9 +461,12 @@ Control the padding around genes. Default is 3000 bp on each side.
 
 ```bash
 # 10 kb flanking for wider genomic context
-trackpy plot faceted Zscan4b -g genes.gtf -b in1.bw in2.bw ip1.bw ip2.bw \
-  -l In1 In2 IP1 IP2 --flank-up 10000 --flank-down 10000 \
-  --cytoband mm10_cytoBandIdeo.txt.gz --show-box -o out
+trackpy plot faceted Zscan4b -g demo/testdata/Mus_musculus.GRCm38.102.gtf.gz -b demo/testdata/GSM5746910_MS_2cell_Input_rep1.bigWig \
+     demo/testdata/GSM5746911_MS_2cell_Input_rep2.bigWig \
+     demo/testdata/GSM5746912_MS_2cell_IP_rep1.bigWig \
+     demo/testdata/GSM5746913_MS_2cell_IP_rep2.bigWig \
+  -l "Input rep1" "Input rep2" "IP rep1" "IP rep2" --flank-up 10000 --flank-down 10000 \
+  --cytoband demo/cytoband/mm10_cytoBandIdeo.txt.gz --show-box -o out
 ```
 
 ![Wide flank](demo/output/param_flank.png)
@@ -437,9 +477,15 @@ trackpy plot faceted Zscan4b -g genes.gtf -b in1.bw in2.bw ip1.bw ip2.bw \
 
 ```bash
 # Taller gene model (1.5x vs default 0.8x)
-trackpy plot faceted Zscan4b Zscan4c -g genes.gtf \
-  -b in1.bw in2.bw ip1.bw ip2.bw -l In1 In2 IP1 IP2 \
-  --gene-ratio 1.5 --cytoband mm10_cytoBandIdeo.txt.gz --show-box -o out
+trackpy plot faceted Zscan4b Zscan4c \
+  -g demo/testdata/Mus_musculus.GRCm38.102.gtf.gz \
+  -b demo/testdata/GSM5746910_MS_2cell_Input_rep1.bigWig \
+     demo/testdata/GSM5746911_MS_2cell_Input_rep2.bigWig \
+     demo/testdata/GSM5746912_MS_2cell_IP_rep1.bigWig \
+     demo/testdata/GSM5746913_MS_2cell_IP_rep2.bigWig \
+  -l "Input rep1" "Input rep2" "IP rep1" "IP rep2" \
+  --gene-ratio 1.5 --cytoband demo/cytoband/mm10_cytoBandIdeo.txt.gz \
+  --show-box -o out
 ```
 
 ![Gene ratio](demo/output/param_gene_ratio.png)
@@ -487,63 +533,69 @@ trackpy plot faceted Zscan4b Zscan4c -g genes.gtf \
 ### 8.1 Basic gene panel with ideogram
 ```bash
 trackpy plot faceted Myc Jun Actb \
-  -g genes.gtf -b input.bw ip.bw -l Input IP \
-  --cytoband mm10_cytoBandIdeo.txt.gz --show-box -o panel
+  -g demo/testdata/Mus_musculus.GRCm38.102.gtf.gz -b input.bw ip.bw -l Input IP \
+  --cytoband demo/cytoband/mm10_cytoBandIdeo.txt.gz --show-box -o panel
 ```
 
 ### 8.2 lncRNA isoform browser
 ```bash
 trackpy plot isoforms Malat1 Xist H19 Airn Hotair \
-  -g genes.gtf -b input.bw ip.bw -l Input IP \
+  -g demo/testdata/Mus_musculus.GRCm38.102.gtf.gz -b input.bw ip.bw -l Input IP \
   --show-box --isoform-label-pos left -o lncRNA
 ```
 
 ### 8.3 Explore a genomic interval (all transcripts)
 ```bash
 trackpy plot regions chr14:54835580-55001465 \
-  -g genes.gtf -b input.bw ip.bw -l Input IP \
-  --show-box --cytoband mm10_cytoBandIdeo.txt.gz -o my_region
+  -g demo/testdata/Mus_musculus.GRCm38.102.gtf.gz -b input.bw ip.bw -l Input IP \
+  --show-box --cytoband demo/cytoband/mm10_cytoBandIdeo.txt.gz -o my_region
 ```
 
 ### 8.4 Faceted region comparison
 ```bash
 trackpy plot faceted chr14:54835580-55001465 chr7:73025897-76116527 \
-  -g genes.gtf -b input.bw ip.bw -l Input IP \
+  -g demo/testdata/Mus_musculus.GRCm38.102.gtf.gz -b input.bw ip.bw -l Input IP \
   --show-box --width 10 -o compare_regions
 ```
 
 ### 8.5 Custom track colors
 ```bash
-trackpy plot faceted Myc Jun -g genes.gtf -b wt.bw ko.bw -l WT KO \
+trackpy plot faceted Myc Jun -g demo/testdata/Mus_musculus.GRCm38.102.gtf.gz -b wt.bw ko.bw -l WT KO \
   --track-colors "#3498DB" "#E74C3C" -o custom_colors
 ```
 
 ### 8.6 Highlight specific regions
 ```bash
-trackpy plot faceted Myc -g genes.gtf -b input.bw ip.bw -l Input IP \
+trackpy plot faceted Myc -g demo/testdata/Mus_musculus.GRCm38.102.gtf.gz -b input.bw ip.bw -l Input IP \
   --highlight chr15:61900000-61901000 "#FF000020" \
   --highlight chr15:61902000-61903000 "#0000FF20" -o highlights
 ```
 
 ### 8.7 BedGraph (ATAC-seq) input
 ```bash
-trackpy plot faceted Actb Myc -g genes.gff3.gz \
+trackpy plot faceted Actb Myc -g demo/testdata/Mus_musculus.GRCm38.102.gtf.gz \
   -b wt.bedgraph.gz ko.bedgraph.gz -l WT KO \
   --track-colors "#3498DB" "#E74C3C" -o atac
 ```
 
 ### 8.8 Compact layout (no y-ticks, no range labels)
 ```bash
-trackpy plot faceted Myc Jun Actb -g genes.gtf -b a.bw b.bw -l A B \
-  --no-yticks --no-range-label --cytoband mm10_cytoBandIdeo.txt.gz -o compact
+trackpy plot faceted Myc Jun Actb -g demo/testdata/Mus_musculus.GRCm38.102.gtf.gz -b a.bw b.bw -l A B \
+  --no-yticks --no-range-label --cytoband demo/cytoband/mm10_cytoBandIdeo.txt.gz -o compact
 ```
 
 ### 8.9 Gene model on top
 
 ```bash
-trackpy plot faceted Zscan4b Zscan4c Zscan4d -g genes.gtf \
-  -b input1.bw input2.bw ip1.bw ip2.bw -l In1 In2 IP1 IP2 \
-  --gene-model-top --cytoband mm10_cytoBandIdeo.txt.gz --show-box -o top
+trackpy plot faceted Zscan4b Zscan4c Zscan4d \
+  -g demo/testdata/Mus_musculus.GRCm38.102.gtf.gz \
+  -b demo/testdata/GSM5746910_MS_2cell_Input_rep1.bigWig \
+     demo/testdata/GSM5746911_MS_2cell_Input_rep2.bigWig \
+     demo/testdata/GSM5746912_MS_2cell_IP_rep1.bigWig \
+     demo/testdata/GSM5746913_MS_2cell_IP_rep2.bigWig \
+  -l "Input rep1" "Input rep2" "IP rep1" "IP rep2" \
+  --gene-model-top --cytoband demo/cytoband/mm10_cytoBandIdeo.txt.gz \
+  --show-box -o top
 ```
 
 ![Gene model on top](demo/output/guide_gene_model_top.png)
@@ -552,8 +604,12 @@ trackpy plot faceted Zscan4b Zscan4c Zscan4d -g genes.gtf \
 
 ```bash
 trackpy plot faceted Malat1 Xist H19 Airn Hotair \
-  -g genes.gtf -b in1.bw in2.bw ip1.bw ip2.bw -l In1 In2 IP1 IP2 \
-  --cytoband mm10_cytoBandIdeo.txt.gz --show-box -o lncRNA
+  -g demo/testdata/Mus_musculus.GRCm38.102.gtf.gz -b demo/testdata/GSM5746910_MS_2cell_Input_rep1.bigWig \
+     demo/testdata/GSM5746911_MS_2cell_Input_rep2.bigWig \
+     demo/testdata/GSM5746912_MS_2cell_IP_rep1.bigWig \
+     demo/testdata/GSM5746913_MS_2cell_IP_rep2.bigWig \
+  -l "Input rep1" "Input rep2" "IP rep1" "IP rep2" \
+  --cytoband demo/cytoband/mm10_cytoBandIdeo.txt.gz --show-box -o lncRNA
 ```
 
 ![lncRNA faceted](demo/output/guide_lncRNA_faceted.png)
