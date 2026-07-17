@@ -14,6 +14,11 @@ Faceted and isoform plots with chromosome ideogram and zoom indicators.
 > This project stands as a demonstration of how AI-assisted development can empower
 > individual researchers to build production-quality bioinformatics tools.
 
+## Documentation
+
+- **[User Guide](USER_GUIDE.md)** — Full manual with examples, recipes, and screenshots
+- **[API Reference](API_REFERENCE.md)** — Complete parameter and function reference
+
 ## Installation
 
 ```bash
@@ -161,11 +166,6 @@ plot_faceted(genes, data, ["Input","IP"], data, IGV_COLORS, "out.pdf",
 regions = parse_regions("genes.gtf", [("7", 10900000, 11000000, "chr7:10.9-11.0Mb")])
 plot_isoforms_regions(regions, data, ["Input","IP"], ..., "out.pdf")
 ```
-
-## Documentation
-
-- **[User Guide](USER_GUIDE.md)** — Full manual with examples, recipes, and screenshots
-- **[API Reference](API_REFERENCE.md)** — Complete parameter and function reference
 
 ## License
 
